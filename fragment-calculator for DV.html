@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>終末先鋒隊　必要欠片数計算機</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            overflow-x: auto; /* 横スクロールを許可 */
+        }
+        label, select {
+            display: block;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+            white-space: nowrap; /* ヘッダーテキストを改行しない */
+        }
+        .highlight {
+            background-color: #ffe6e6; /* 薄いピンク */
+        }
+        .long-text {
+            white-space: nowrap; /* テキストを改行しない */
+        }
+        @media screen and (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            th, td {
+                padding: 4px;
+            }
+            h1 {
+                font-size: 1.2em;
+            }
+            label {
+                font-size: 0.9em;
+            }
+            button {
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>終末先鋒隊　欠片計算機</h1>
+
+        <label for="rarity">レアリティ:</label>
+        <select id="rarity">
+            <option value="B">B</option>
+            <option value="A">A</option>
+            <option value="S">S</option>
+            <option value="SP">SP</option>
+        </select>
+
+        <label for="level">レベル:</label>
+        <select id="level" onchange="updateCurrentExpOptions()">
+            <option value="">選択してください</option>
+        </select>
+
+        <label for="currentExp">現在の経験値:</label>
+        <select id="currentExp" disabled>
+            <option value="">レベルを選択してください</option>
+        </select>
+
+        <button onclick="calculate()">計算する</button>
+
+        <table id="expTable">
+            <thead>
+                <tr>
+                    <th>レベル</th>
+                    <th>必要欠片数</th>
+                    <th class="long-text">必要獲得回数（余剰欠片数）</th>
+                    <th class="long-text">必要下位欠片＆ラッキーコイン数</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 計算結果がここに表示されます -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const expPerRarity = {
+            B: 10,
+            A: 20,
+            S: 80,
+            SP: 80
+        };
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const levelSelect = document.getElementById('level');
+            for (let i = 1; i <= 50; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.text = i;
+                levelSelect.appendChild(option);
+            }
+        });
+
+        function updateCurrentExpOptions() {
+            const level = parseInt(document.getElementById('level').value);
+            const currentExpSelect = document.getElementById('currentExp');
+
+            if (!isNaN(level)) {
+                let nextLevelExp = level + 1;
+                if (nextLevelExp % 5 === 0) {
+                    nextLevelExp *= 2;
+                }
+
+                currentExpSelect.disabled = false;
+                currentExpSelect.innerHTML = `<option value="">選択してください</option>`;
+                for (let i = 1; i <= nextLevelExp - 1; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.text = i;
+                    currentExpSelect.appendChild(option);
+                }
+            } else {
+                currentExpSelect.disabled = true;
+                currentExpSelect.innerHTML = `<option value="">レベルを選択してください</option>`;
+            }
+        }
+
+        function calculate() {
+            const rarity = document.getElementById('rarity').value;
+            const level = parseInt(document.getElementById('level').value);
+            const currentExp = parseInt(document.getElementById('currentExp').value);
+            const expTableBody = document.getElementById('expTable').getElementsByTagName('tbody')[0];
+            
+            if (isNaN(level) || isNaN(currentExp)) {
+                alert("レベルと現在の経験値を選択してください。");
+                return;
+            }
+            
+            expTableBody.innerHTML = '';
+
+            let expNeeded = 0;
+            let remainingExp = currentExp;
+
+            for (let i = level + 1; i <= 50; i++) {
+                let nextLevelExp = i;
+                if (i % 5 === 0) {
+                    nextLevelExp *= 2;
+                }
+
+                expNeeded += nextLevelExp;
+
+                if (i === level + 1) {
+                    expNeeded -= remainingExp;
+                }
+
+                const characterObtains = Math.ceil(expNeeded / expPerRarity[rarity]);
+                const remainingFragments = (characterObtains * expPerRarity[rarity]) - expNeeded;
+
+                let row = expTableBody.insertRow();
+                if (i % 5 === 0) {
+                    row.classList.add('highlight');
+                }
+                let cell1 = row.insertCell(0);
+                let cell2 = row.insertCell(1);
+                let cell3 = row.insertCell(2);
+                let cell4 = row.insertCell(3);
+
+                cell1.innerHTML = `${i}`;
+                cell2.innerHTML = `${expNeeded}`;
+                cell3.innerHTML = `${characterObtains} (${remainingFragments})`;
+
+                if (rarity === 'A' || rarity === 'S' || rarity === 'SP') {
+                    const lowerFragments = expNeeded * 3;
+                    let luckyCoins;
+                    if (rarity === 'A') {
+                        luckyCoins = expNeeded * 3;
+                    } else if (rarity === 'S') {
+                        luckyCoins = expNeeded * 4;
+                    } else if (rarity === 'SP') {
+                        luckyCoins = expNeeded * 6;
+                    }
+                    cell4.innerHTML = `${lowerFragments} ＆ ${luckyCoins}コイン`;
+                } else {
+                    cell4.innerHTML = '-';
+                }
+
+                remainingExp = 0;
+            }
+        }
+    </script>
+</body>
+</html>
